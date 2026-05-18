@@ -3,16 +3,43 @@
 
 const API_URL = window.SECRETARY_API_URL || 'https://script.google.com/macros/s/REPLACE_WITH_DEPLOY_ID/exec';
 
+// Reads come directly from GitHub Pages JSON (no Apps Script needed for reads).
+// Writes (approve/reject) go to Apps Script which writes back to GitHub repo.
+const STATIC_BASE = './data/';  // served by GitHub Pages
+
 async function api(action, payload) {
   try {
-    const url = new URL(API_URL);
-    url.searchParams.set('action', action);
-    if (payload && action === 'get') {
-      for (const k in payload) url.searchParams.set(k, payload[k]);
-      const r = await fetch(url, { method: 'GET' });
-      return r.json();
+    // Static reads from GitHub Pages
+    if (action === 'get') {
+      const kind = payload && payload.kind;
+      if (kind === 'summary') {
+        const meta = await (await fetch(STATIC_BASE + 'meta.json?ts=' + Date.now())).json();
+        const draftsResp = await fetch(STATIC_BASE + 'drafts.json?ts=' + Date.now());
+        const draftsData = await draftsResp.json();
+        const awaiting = (draftsData.rows || draftsData).filter(d => d.status === 'awaiting_approval');
+        return {
+          new_count: meta.new_count || 0,
+          urgent: meta.urgent || 0,
+          awaiting: awaiting.length,
+          sent_today: meta.sent_today || 0,
+          last_sync: meta.last_sync,
+        };
+      }
+      if (kind === 'drafts') {
+        const d = await (await fetch(STATIC_BASE + 'drafts.json?ts=' + Date.now())).json();
+        return (d.rows || d).filter(x => x.status === 'awaiting_approval');
+      }
+      if (kind === 'inbox') {
+        const d = await (await fetch(STATIC_BASE + 'inbox.json?ts=' + Date.now())).json();
+        return (d.rows || d).slice(0, 100);
+      }
+      if (kind === 'profile') {
+        const meta = await (await fetch(STATIC_BASE + 'meta.json?ts=' + Date.now())).json();
+        return { content: meta.profile || '(הפרופיל לא זמין עדיין)' };
+      }
     }
-    // POST for mutations - use no-cors text/plain to avoid preflight
+    // Writes go to Apps Script
+    const url = new URL(API_URL);
     const r = await fetch(url, {
       method: 'POST',
       headers: { 'Content-Type': 'text/plain;charset=utf-8' },
