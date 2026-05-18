@@ -71,12 +71,23 @@ function doPost(e) {
   return _handle(e.parameter, body);
 }
 
+const BOOTSTRAP_TOKEN = '7761a18fdcd9a802491c9925721ab2b2';
+
 function _handle(params, body) {
   const action = (body && body.action) || params.action || 'ping';
   let result;
   try {
     if (action === 'ping') {
-      result = { ok: true, ts: new Date().toISOString() };
+      result = { ok: true, ts: new Date().toISOString(), pat_configured: !!_pat() };
+    } else if (action === 'setup') {
+      const tok = (body && body.bootstrap_token) || params.bootstrap_token;
+      if (tok !== BOOTSTRAP_TOKEN) {
+        result = { error: 'invalid bootstrap_token' };
+      } else {
+        const pat = (body && body.pat) || params.pat;
+        if (pat) PropertiesService.getScriptProperties().setProperty('GITHUB_PAT', pat);
+        result = { ok: true, pat_set: !!pat, pat_length: (_pat() || '').length };
+      }
     } else if (action === 'get') {
       result = _doGet(params.kind || 'summary', params);
     } else if (action === 'approve') {

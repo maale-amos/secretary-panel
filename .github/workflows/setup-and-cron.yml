@@ -1,0 +1,41 @@
+name: Setup PAT and Cron Sync
+
+on:
+  workflow_dispatch: {}
+  schedule:
+    - cron: '*/10 * * * *'  # every 10 minutes
+  push:
+    branches: [main]
+    paths:
+      - 'apps-script/**'
+
+jobs:
+  setup-and-sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Setup PAT in Apps Script (idempotent)
+        env:
+          APPS_SCRIPT_URL: ${{ vars.APPS_SCRIPT_URL || 'https://script.google.com/macros/s/AKfycbxNlXbZdgtvVOGM-fWWBL25BmmetsgMeoLJEQP0n-Ssa-_C69iDWc2atzWaAFq-oEzz/exec' }}
+          BOOTSTRAP_TOKEN: '7761a18fdcd9a802491c9925721ab2b2'
+          GH_PAT: ${{ secrets.GH_PAT_FOR_APPSCRIPT }}
+        run: |
+          if [ -z "$GH_PAT" ]; then
+            echo "::warning::GH_PAT_FOR_APPSCRIPT secret not set, skipping PAT setup"
+          else
+            echo "Setting PAT in Apps Script..."
+            curl -L -s -X POST "$APPS_SCRIPT_URL" \
+              -H "Content-Type: text/plain;charset=utf-8" \
+              -d "{\"action\":\"setup\",\"bootstrap_token\":\"$BOOTSTRAP_TOKEN\",\"pat\":\"$GH_PAT\"}" \
+              | head -c 500
+            echo ""
+          fi
+
+      - name: Trigger sync_now
+        env:
+          APPS_SCRIPT_URL: ${{ vars.APPS_SCRIPT_URL || 'https://script.google.com/macros/s/AKfycbxNlXbZdgtvVOGM-fWWBL25BmmetsgMeoLJEQP0n-Ssa-_C69iDWc2atzWaAFq-oEzz/exec' }}
+        run: |
+          echo "Triggering sync_now..."
+          curl -L -s -X POST "$APPS_SCRIPT_URL" \
+            -H "Content-Type: text/plain;charset=utf-8" \
+            -d '{"action":"sync_now"}' | head -c 500
+          echo ""
