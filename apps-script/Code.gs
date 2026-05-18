@@ -1,36 +1,70 @@
-// Apps Script Web App for Personal Secretary Cloud Panel
-// Deploys as: Web App, execute as ME, access ANYONE.
-// The home computer's sync_to_sheet.py writes here; the cloud panel reads/writes here.
+// Apps Script Web App - Personal Secretary Cloud Panel
+// Architecture: Bypasses NetFree using Time-based Triggers that run on Google's servers.
+//
+// FLOW:
+// 1. Home PC pushes state.json + drafts.json to GitHub repo (NetFree allows git).
+// 2. Time-Trigger syncFromGitHub() runs every 5 min, fetches JSON from raw.githubusercontent.com,
+//    updates Sheet. (Runs on Google's servers, NOT through NetFree.)
+// 3. Panel (browser) reads from this Apps Script (via GET) - works from phone or any device.
+// 4. Approve/Reject in panel → POST to Apps Script → writes approval to GitHub via API.
+// 5. Home PC git pulls approvals/ folder → sender.py sends.
 
-const SHEET_ID = '1x5ul3XtUFpNWrdoK-vPaYWq56nSuim-DEvFMmLm3i8w';  // Secretary State sheet
+const SHEET_ID = '1x5ul3XtUFpNWrdoK-vPaYWq56nSuim-DEvFMmLm3i8w';
+const GITHUB_OWNER = 'maale-amos';
+const GITHUB_REPO = 'secretary-panel';
 
-function _ss() {
-  return SpreadsheetApp.openById(SHEET_ID);
+// ===== Setup: Yosef runs this ONCE in the Apps Script editor =====
+// File menu → Project Settings → Script Properties → Add GITHUB_PAT.
+// Or run setGitHubPAT('gho_...') from editor once and delete the call.
+
+function setGitHubPAT(pat) {
+  PropertiesService.getScriptProperties().setProperty('GITHUB_PAT', pat);
+  return 'PAT saved (length: ' + (pat || '').length + ')';
 }
 
-function _readSheetAsObjects(name) {
-  const sh = _ss().getSheetByName(name);
-  if (!sh) return [];
-  const rng = sh.getDataRange();
-  if (rng.getNumRows() < 2) return [];
-  const values = rng.getValues();
-  const headers = values[0];
-  return values.slice(1).map(row => {
-    const obj = {};
-    headers.forEach((h, i) => obj[h] = row[i]);
-    return obj;
+function _pat() {
+  return PropertiesService.getScriptProperties().getProperty('GITHUB_PAT') || '';
+}
+
+// ===== Time-based trigger: pull JSON from GitHub to Sheet =====
+
+function syncFromGitHub() {
+  const base = 'https://raw.githubusercontent.com/' + GITHUB_OWNER + '/' + GITHUB_REPO + '/main/data/';
+  ['meta', 'drafts', 'inbox'].forEach(function (kind) {
+    try {
+      const resp = UrlFetchApp.fetch(base + kind + '.json', { muteHttpExceptions: true });
+      if (resp.getResponseCode() !== 200) return;
+      const data = JSON.parse(resp.getContentText());
+      _writeSheet(kind, data);
+    } catch (e) {
+      Logger.log('syncFromGitHub ' + kind + ' failed: ' + e);
+    }
   });
 }
 
-function _writeRow(name, row) {
-  const sh = _ss().getSheetByName(name);
-  sh.appendRow(row);
+function _writeSheet(kind, data) {
+  const ss = SpreadsheetApp.openById(SHEET_ID);
+  let sh = ss.getSheetByName(kind);
+  if (!sh) sh = ss.insertSheet(kind);
+  sh.clear();
+  if (kind === 'meta') {
+    const keys = Object.keys(data);
+    sh.appendRow(keys);
+    sh.appendRow(keys.map(function (k) { return data[k]; }));
+  } else {
+    const rows = data.rows || data;
+    if (!rows || !rows.length) return;
+    const headers = Object.keys(rows[0]);
+    sh.appendRow(headers);
+    rows.forEach(function (r) {
+      sh.appendRow(headers.map(function (h) { return r[h] != null ? r[h] : ''; }));
+    });
+  }
 }
 
-function doGet(e) {
-  return _handle(e.parameter, null);
-}
+// ===== Web App endpoints =====
 
+function doGet(e) { return _handle(e.parameter, null); }
 function doPost(e) {
   let body = null;
   try { body = JSON.parse(e.postData.contents); } catch (_) { body = {}; }
@@ -38,126 +72,123 @@ function doPost(e) {
 }
 
 function _handle(params, body) {
-  const action = (body && body.action) || params.action || 'get';
+  const action = (body && body.action) || params.action || 'ping';
   let result;
   try {
-    if (action === 'get') {
+    if (action === 'ping') {
+      result = { ok: true, ts: new Date().toISOString() };
+    } else if (action === 'get') {
       result = _doGet(params.kind || 'summary', params);
     } else if (action === 'approve') {
-      result = _approve(body.draft_id, body.body_text, body.subject);
+      result = _writeApproval(body.draft_id, 'approved', {
+        body_text: body.body_text, subject: body.subject,
+      });
     } else if (action === 'reject') {
-      result = _reject(body.draft_id, body.reason);
-    } else if (action === 'push') {
-      // Home computer pushing fresh data
-      result = _pushFromHome(body);
+      result = _writeApproval(body.draft_id, 'rejected', { reason: body.reason });
+    } else if (action === 'sync_now') {
+      syncFromGitHub();
+      result = { ok: true, action: 'sync_now done' };
     } else {
-      result = { error: 'unknown action' };
+      result = { error: 'unknown action: ' + action };
     }
   } catch (err) {
-    result = { error: String(err) };
+    result = { error: String(err), stack: err.stack };
   }
   return ContentService.createTextOutput(JSON.stringify(result))
     .setMimeType(ContentService.MimeType.JSON);
 }
 
+function _readSheet(kind) {
+  const sh = SpreadsheetApp.openById(SHEET_ID).getSheetByName(kind);
+  if (!sh || sh.getLastRow() < 2) return [];
+  const v = sh.getDataRange().getValues();
+  const headers = v[0];
+  return v.slice(1).map(function (row) {
+    const o = {};
+    headers.forEach(function (h, i) { o[h] = row[i]; });
+    return o;
+  });
+}
+
 function _doGet(kind, params) {
   if (kind === 'summary') {
-    const meta = _readSheetAsObjects('meta');
-    const drafts = _readSheetAsObjects('drafts').filter(d => d.status === 'awaiting_approval');
-    const m = meta[0] || {};
+    const meta = _readSheet('meta')[0] || {};
+    const drafts = _readSheet('drafts').filter(function (d) { return d.status === 'awaiting_approval'; });
     return {
-      new_count: parseInt(m.new_count) || 0,
-      urgent: parseInt(m.urgent) || 0,
+      new_count: parseInt(meta.new_count) || 0,
+      urgent: parseInt(meta.urgent) || 0,
       awaiting: drafts.length,
-      sent_today: parseInt(m.sent_today) || 0,
-      last_sync: m.last_sync || null,
+      sent_today: parseInt(meta.sent_today) || 0,
+      last_sync: meta.last_sync || null,
     };
   }
   if (kind === 'drafts') {
-    return _readSheetAsObjects('drafts').filter(d => d.status === 'awaiting_approval');
+    return _readSheet('drafts').filter(function (d) { return d.status === 'awaiting_approval'; });
   }
   if (kind === 'inbox') {
-    const hours = parseInt(params.hours) || 48;
-    return _readSheetAsObjects('inbox').slice(0, 100);
+    return _readSheet('inbox').slice(0, 100);
   }
   if (kind === 'profile') {
-    const meta = _readSheetAsObjects('meta');
-    return { content: (meta[0] && meta[0].profile) || '(לא זמין)' };
+    const meta = _readSheet('meta')[0] || {};
+    return { content: meta.profile || '(לא זמין)' };
   }
   return { error: 'unknown kind' };
 }
 
-function _approve(draft_id, body_text, subject) {
-  const sh = _ss().getSheetByName('drafts');
-  const data = sh.getDataRange().getValues();
-  const headers = data[0];
-  const idCol = headers.indexOf('id');
-  const statusCol = headers.indexOf('status');
-  const bodyCol = headers.indexOf('body_text');
-  const subjCol = headers.indexOf('subject');
-  const approvedAtCol = headers.indexOf('approved_at');
-  for (let i = 1; i < data.length; i++) {
-    if (String(data[i][idCol]) === String(draft_id)) {
-      sh.getRange(i + 1, statusCol + 1).setValue('approved');
-      if (body_text) sh.getRange(i + 1, bodyCol + 1).setValue(body_text);
-      if (subject) sh.getRange(i + 1, subjCol + 1).setValue(subject);
-      sh.getRange(i + 1, approvedAtCol + 1).setValue(new Date().toISOString());
-      _writeRow('audit', [new Date().toISOString(), 'yosef', 'approve', draft_id, 'cloud-panel']);
-      return { ok: true };
-    }
-  }
-  return { error: 'draft not found' };
-}
-
-function _reject(draft_id, reason) {
-  const sh = _ss().getSheetByName('drafts');
-  const data = sh.getDataRange().getValues();
-  const headers = data[0];
-  const idCol = headers.indexOf('id');
-  const statusCol = headers.indexOf('status');
-  const approvedAtCol = headers.indexOf('approved_at');
-  const errCol = headers.indexOf('send_error');
-  for (let i = 1; i < data.length; i++) {
-    if (String(data[i][idCol]) === String(draft_id)) {
-      sh.getRange(i + 1, statusCol + 1).setValue('rejected');
-      sh.getRange(i + 1, approvedAtCol + 1).setValue(new Date().toISOString());
-      if (reason) sh.getRange(i + 1, errCol + 1).setValue(reason);
-      _writeRow('audit', [new Date().toISOString(), 'yosef', 'reject', draft_id, reason || '']);
-      return { ok: true };
-    }
-  }
-  return { error: 'draft not found' };
-}
-
-function _pushFromHome(body) {
-  // body = { token, kind, rows: [...] } or { token, meta: {...} }
-  const expected = PropertiesService.getScriptProperties().getProperty('PUSH_TOKEN') || 'CHANGE_ME';
-  if (body.token !== expected) return { error: 'invalid token' };
-  if (body.kind === 'meta') {
-    const sh = _ss().getSheetByName('meta');
-    sh.clear();
-    const keys = Object.keys(body.meta);
-    sh.appendRow(keys);
-    sh.appendRow(keys.map(k => body.meta[k]));
-    return { ok: true };
-  }
-  if (body.kind === 'drafts' || body.kind === 'inbox') {
-    const sh = _ss().getSheetByName(body.kind);
-    sh.clear();
-    if (body.rows && body.rows.length) {
-      const headers = Object.keys(body.rows[0]);
-      sh.appendRow(headers);
-      body.rows.forEach(r => sh.appendRow(headers.map(h => r[h] != null ? r[h] : '')));
-    }
-    return { ok: true, count: body.rows.length };
-  }
-  return { error: 'unknown push kind' };
-}
-
-function initSheets() {
-  const ss = _ss();
-  ['meta', 'drafts', 'inbox', 'audit'].forEach(name => {
-    if (!ss.getSheetByName(name)) ss.insertSheet(name);
+function _writeApproval(draft_id, status, extra) {
+  if (!draft_id) return { error: 'missing draft_id' };
+  const pat = _pat();
+  if (!pat) return { error: 'GITHUB_PAT not configured in Script Properties' };
+  const ts = Date.now();
+  const path = 'approvals/' + draft_id + '_' + ts + '.json';
+  const payload = {
+    draft_id: parseInt(draft_id),
+    status: status,
+    timestamp: new Date().toISOString(),
+    extra: extra || {},
+  };
+  const content = Utilities.base64Encode(
+    Utilities.newBlob(JSON.stringify(payload, null, 2)).getBytes()
+  );
+  const url = 'https://api.github.com/repos/' + GITHUB_OWNER + '/' + GITHUB_REPO + '/contents/' + path;
+  const resp = UrlFetchApp.fetch(url, {
+    method: 'put',
+    contentType: 'application/json',
+    headers: {
+      Authorization: 'token ' + pat,
+      Accept: 'application/vnd.github+json',
+    },
+    payload: JSON.stringify({
+      message: 'approval: draft #' + draft_id + ' → ' + status,
+      content: content,
+    }),
+    muteHttpExceptions: true,
   });
-  return 'sheets ready';
+  const code = resp.getResponseCode();
+  // Also update Sheet locally so panel reflects immediately
+  if (code === 201) {
+    try {
+      const sh = SpreadsheetApp.openById(SHEET_ID).getSheetByName('drafts');
+      const data = sh.getDataRange().getValues();
+      const idCol = data[0].indexOf('id');
+      const statusCol = data[0].indexOf('status');
+      for (let i = 1; i < data.length; i++) {
+        if (String(data[i][idCol]) === String(draft_id)) {
+          sh.getRange(i + 1, statusCol + 1).setValue(status);
+          break;
+        }
+      }
+    } catch (_) {}
+  }
+  return { ok: code === 201, http: code };
+}
+
+// ===== Trigger setup (Yosef runs once) =====
+
+function installTrigger() {
+  ScriptApp.getProjectTriggers().forEach(function (t) {
+    if (t.getHandlerFunction() === 'syncFromGitHub') ScriptApp.deleteTrigger(t);
+  });
+  ScriptApp.newTrigger('syncFromGitHub').timeBased().everyMinutes(5).create();
+  return 'trigger installed (every 5 min)';
 }
