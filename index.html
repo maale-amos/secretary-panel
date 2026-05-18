@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>מזכיר אישי - פאנל</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header>
+  <h1>📬 מזכיר אישי</h1>
+  <div class="status" id="conn-status">מתחבר...</div>
+  <nav>
+    <button data-tab="dashboard" class="active">סקירה</button>
+    <button data-tab="drafts">טיוטות לאישור <span id="drafts-badge" class="badge"></span></button>
+    <button data-tab="inbox">תיבת דואר</button>
+    <button data-tab="profile">פרופיל</button>
+  </nav>
+</header>
+
+<main>
+  <section id="dashboard" class="tab active">
+    <div class="cards">
+      <div class="card"><div class="num" id="s-new">—</div><div class="lbl">מיילים חדשים</div></div>
+      <div class="card urgent"><div class="num" id="s-urgent">—</div><div class="lbl">דחופים</div></div>
+      <div class="card await"><div class="num" id="s-await">—</div><div class="lbl">טיוטות לאישור</div></div>
+      <div class="card sent"><div class="num" id="s-sent">—</div><div class="lbl">נשלחו היום</div></div>
+    </div>
+    <p class="last-sync">סונכרן: <span id="last-sync">—</span></p>
+  </section>
+
+  <section id="drafts" class="tab">
+    <h2>טיוטות לאישור</h2>
+    <div id="drafts-list">טוען...</div>
+  </section>
+
+  <section id="inbox" class="tab">
+    <h2>תיבת דואר מאוחדת</h2>
+    <div id="inbox-list">טוען...</div>
+  </section>
+
+  <section id="profile" class="tab">
+    <h2>פרופיל אישי</h2>
+    <div id="profile-content">טוען...</div>
+  </section>
+</main>
+
+<script src="app.js"></script>
+</body>
+</html>
