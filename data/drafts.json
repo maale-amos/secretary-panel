@@ -1,0 +1,40 @@
+{
+  "rows": [
+    {
+      "id": 3,
+      "from_account": "private",
+      "to_addrs": "tt0527686018@gmail.com",
+      "cc_addrs": null,
+      "subject": "Re: בוצע: 3 קוביות חדשות במערכת — קידום כתיבה + שיעורים פרטניים",
+      "body_text": "מקובל. אשלח לו שוב מהמייל הרשמי של הצוות.\n",
+      "status": "awaiting_approval",
+      "reason_he": "אהוד אמר שהרב קליין רוצה לקבל את הקישור מהמייל הרשמי של הצוות, לא מהפרטי",
+      "created_at": 1779116403,
+      "in_reply_to_id": 77
+    },
+    {
+      "id": 2,
+      "from_account": "mechina",
+      "to_addrs": "sh9996723@gmail.com",
+      "cc_addrs": null,
+      "subject": "Re: נסיעה למעמד פדיון פטר חמור",
+      "body_text": "תודה רחל. נשלח לכל ההורים מייל מסודר עם כל הפרטים - מה להביא, שעת חזרה ושאר ההסדרים. בהקדם.\n",
+      "status": "awaiting_approval",
+      "reason_he": "הורה ביקש פרטי נסיעה - יש לי תשובה כללית; הפרטים המדוייקים (זמן חזרה, מה להביא) צריכים להגיע מצוות המכינה",
+      "created_at": 1779116403,
+      "in_reply_to_id": 101
+    },
+    {
+      "id": 1,
+      "from_account": "private",
+      "to_addrs": "zmw100@gmail.com",
+      "cc_addrs": "tt0527686018@gmail.com",
+      "subject": "Re: ערב גיבוש לצוות",
+      "body_text": "כ\"ו סיון - מקובל עליי.\n\nאהוד, אם בסוף לא יסתדר, מה ימים פנויים אצלך באותו שבוע ובשבוע שאחריו?\n",
+      "status": "awaiting_approval",
+      "reason_he": "תאריך מתוקן - אהוד הבהיר במייל #61 שכ\"ו תמוז זה ליל שבת, מדובר בכ\"ו סיון",
+      "created_at": 1779115654,
+      "in_reply_to_id": 75
+    }
+  ]
+}
