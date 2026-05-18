@@ -1,6 +1,42 @@
 {
   "rows": [
     {
+      "id": 23,
+      "from_account": "mechina",
+      "to_addrs": "a0527159923@gmail.com",
+      "cc_addrs": null,
+      "subject": "Re: מחר ראש חודש - לימודים",
+      "body_text": "תודה על השאלה. נשלח בקרוב מייל מסודר לכל ההורים עם פירוט מלא של פדיון פטר חמור.\n",
+      "status": "awaiting_approval",
+      "reason_he": "הורים שואלים על מטרת ההשתתפות בפדיון - נסיעות או החמור עצמו",
+      "created_at": 1779120209,
+      "in_reply_to_id": 953
+    },
+    {
+      "id": 22,
+      "from_account": "private",
+      "to_addrs": "tt0527686018@gmail.com",
+      "cc_addrs": null,
+      "subject": "Re: בוצע: 3 קוביות חדשות במערכת — קידום כתיבה + שיעורים פרטניים",
+      "body_text": "תשלח להם את הקישור ישירות מהמייל הרשמי של הצוות.\n",
+      "status": "awaiting_approval",
+      "reason_he": "אהוד שאל איך לשתף את הקישור עם הרב יודלוב והרב קליין",
+      "created_at": 1779120209,
+      "in_reply_to_id": 155
+    },
+    {
+      "id": 21,
+      "from_account": "private",
+      "to_addrs": "bb8420042@gmail.com",
+      "cc_addrs": null,
+      "subject": "Re: הצעת מחיר",
+      "body_text": "תודה דניאל. אבדוק את ההצעה ואחזור אליך השבוע.\n",
+      "status": "awaiting_approval",
+      "reason_he": "ספק שואל אם ההצעה פתוחה ומבקש הורדת מחיר - תשובה דוחה לזמן לבדיקה",
+      "created_at": 1779120209,
+      "in_reply_to_id": 945
+    },
+    {
       "id": 20,
       "from_account": "private",
       "to_addrs": "m025001297@gmail.com",
