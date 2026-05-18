@@ -2,7 +2,7 @@
 // Deploys as: Web App, execute as ME, access ANYONE.
 // The home computer's sync_to_sheet.py writes here; the cloud panel reads/writes here.
 
-const SHEET_ID = 'REPLACE_WITH_SHEET_ID';  // set after creating the Google Sheet
+const SHEET_ID = '1x5ul3XtUFpNWrdoK-vPaYWq56nSuim-DEvFMmLm3i8w';  // Secretary State sheet
 
 function _ss() {
   return SpreadsheetApp.openById(SHEET_ID);
