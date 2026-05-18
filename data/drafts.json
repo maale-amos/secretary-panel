@@ -1,6 +1,42 @@
 {
   "rows": [
     {
+      "id": 6,
+      "from_account": "private",
+      "to_addrs": "tt0527686018@gmail.com",
+      "cc_addrs": null,
+      "subject": "Re: אוכל.",
+      "body_text": "בסדר, שמרתי את המספר 08-6427788.\n",
+      "status": "awaiting_approval",
+      "reason_he": "אהוד ביקש לשמור מספר פיצרייה (08-6427788) כי הטלפון שלו לא עובד",
+      "created_at": 1779118814,
+      "in_reply_to_id": 20
+    },
+    {
+      "id": 5,
+      "from_account": "mechina",
+      "to_addrs": "sorahshalva@gmail.com",
+      "cc_addrs": null,
+      "subject": "Re: נסיעה למעמד פדיון פטר חמור",
+      "body_text": "תודה רבה רחל. נטפל בהעברת ה-20 שח לישיבת חכמת רחמים דרכנו.\n",
+      "status": "awaiting_approval",
+      "reason_he": "הורה תרמה 45 שח + שאלה אם אפשר להעביר 20 נוספים דרך המכינה כי האתר דורש מינימום 104",
+      "created_at": 1779118814,
+      "in_reply_to_id": 129
+    },
+    {
+      "id": 4,
+      "from_account": "yeshiva_prev",
+      "to_addrs": "info@rachelhyman-academy.com",
+      "cc_addrs": null,
+      "subject": "Re: גבריאל",
+      "body_text": "תודה. אעביר ליעד הנכון.\n",
+      "status": "awaiting_approval",
+      "reason_he": "המייל הגיע ל-יוסף בטעות (היה אמור להגיע לאבא של דובי). תודה והעברה",
+      "created_at": 1779118814,
+      "in_reply_to_id": 135
+    },
+    {
       "id": 3,
       "from_account": "private",
       "to_addrs": "tt0527686018@gmail.com",
